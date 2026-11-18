@@ -1,0 +1,105 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 18,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "standalone-windows-release",
+      "displayName": "Standalone Windows Release (Local Ninja + w64devkit GCC 14)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/tools/ninja/ninja.exe",
+        "CMAKE_C_COMPILER": "${sourceDir}/tools/w64devkit/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "${sourceDir}/tools/w64devkit/bin/g++.exe",
+        "Python3_ROOT_DIR": "${sourceDir}/tools/python",
+        "Python3_EXECUTABLE": "${sourceDir}/tools/python/python.exe",
+        "GPGPU_BUILD_TESTS": "ON",
+        "GPGPU_BUILD_SHARED": "ON",
+        "GPGPU_BUILD_EXAMPLES": "ON",
+        "GPGPU_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "standalone-windows-debug",
+      "displayName": "Standalone Windows Debug (Local Ninja + w64devkit GCC 14)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/tools/ninja/ninja.exe",
+        "CMAKE_C_COMPILER": "${sourceDir}/tools/w64devkit/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "${sourceDir}/tools/w64devkit/bin/g++.exe",
+        "GPGPU_BUILD_TESTS": "ON",
+        "GPGPU_BUILD_SHARED": "ON",
+        "GPGPU_BUILD_EXAMPLES": "ON",
+        "GPGPU_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux x86_64 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GPGPU_BUILD_TESTS": "ON",
+        "GPGPU_BUILD_SHARED": "ON",
+        "GPGPU_BUILD_EXAMPLES": "ON",
+        "GPGPU_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "linux-rpi-arm64-release",
+      "displayName": "Raspberry Pi 4/5 (ARM64 V3DV) Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/rpi-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_FLAGS": "-O3 -mcpu=native",
+        "GPGPU_BUILD_TESTS": "ON",
+        "GPGPU_BUILD_SHARED": "ON",
+        "GPGPU_BUILD_EXAMPLES": "ON",
+        "GPGPU_BUILD_BENCHMARKS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "standalone-windows-release",
+      "configurePreset": "standalone-windows-release"
+    },
+    {
+      "name": "standalone-windows-debug",
+      "configurePreset": "standalone-windows-debug"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "linux-rpi-arm64-release",
+      "configurePreset": "linux-rpi-arm64-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "standalone-windows-release",
+      "configurePreset": "standalone-windows-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "standalone-windows-debug",
+      "configurePreset": "standalone-windows-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
