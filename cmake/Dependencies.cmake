@@ -6,6 +6,30 @@
 
 set(GPGPU_EXTERNAL_DIR "${PROJECT_SOURCE_DIR}/external")
 
+include("${PROJECT_SOURCE_DIR}/cmake/toolchains/GitDownloader.cmake")
+
+# --- Bağımlılık listesi ----------------------------------------------------
+# Bicim: <klasor adi>|<git url>|<tag / branch / commit>
+set(GPGPU_DEPENDENCIES
+    "benchmark|https://github.com/google/benchmark.git|v1.8.4"
+    "glslang|https://github.com/KhronosGroup/glslang.git|14.2.0"
+    "googletest|https://github.com/google/googletest.git|v1.13.0"
+    "spdlog|https://github.com/gabime/spdlog.git|v1.17.0"
+    "SPIRV-Headers|https://github.com/arm/SPIRV-Headers.git|vulkan-sdk-1.3.283.0"
+    "SPIRV-Tools|https://github.com/KhronosGroup/SPIRV-Tools.git|vulkan-sdk-1.3.283.0"
+    "volk|https://github.com/zeux/volk.git|vulkan-sdk-1.3.283.0"
+    "Vulkan-Headers|https://github.com/KhronosGroup/Vulkan-Headers.git|vulkan-sdk-1.3.283.0"
+    "VulkanMemoryAllocator|https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git|v3.1.0"
+    "xxHash|https://github.com/pombredanne/xxHash-3.git|7bff939"
+)
+
+# GitDownloader(<RootPath> <bagimlilik listesi>)
+GitDownloader("${GPGPU_EXTERNAL_DIR}" "${GPGPU_DEPENDENCIES}")
+
+
+
+
+
 # 1. Vulkan-Headers (Header-only, VK_NO_PROTOTYPES for dynamic volk loading)
 if(NOT EXISTS "${GPGPU_EXTERNAL_DIR}/Vulkan-Headers/include/vulkan/vulkan.h")
     message(FATAL_ERROR "Missing local dependency: external/Vulkan-Headers")
