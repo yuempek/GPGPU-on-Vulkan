@@ -9,11 +9,11 @@
 using namespace gpgpu;
 
 TEST(ShaderToyTest, JumpingGlslExecution) {
-    std::ifstream file("ShadertoyOnVulkan/resources/jumping.glsl");
+    std::ifstream file("resources/jumping.glsl");
     if (!file.is_open()) {
-        file.open("../../ShadertoyOnVulkan/resources/jumping.glsl");
+        file.open("../../resources/jumping.glsl");
     }
-    ASSERT_TRUE(file.is_open()) << "Could not open ShadertoyOnVulkan/resources/jumping.glsl";
+    ASSERT_TRUE(file.is_open()) << "Could not open resources/jumping.glsl";
 
     std::stringstream ss;
     ss << file.rdbuf();

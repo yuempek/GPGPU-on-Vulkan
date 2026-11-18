@@ -79,7 +79,7 @@ TEST(ComputeExecutionTest, Compute1DOneMillionElementsCosAccuracy) {
     const size_t N = 1'000'000;
     std::vector<float> hostInput(N);
     for (size_t i = 0; i < N; ++i) {
-        hostInput[i] = static_cast<float>(i) * 0.001f;
+        hostInput[i] = static_cast<float>(i) * 0.0001f;
     }
 
     auto inData = gpu.createData("inData", hostInput);
