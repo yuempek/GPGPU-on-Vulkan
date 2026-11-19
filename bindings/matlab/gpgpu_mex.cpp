@@ -123,7 +123,7 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
             mxFree(interpStr);
         }
 		
-		GPGPU_Dtype dataType = GPGPU_DTYPE_FLOAT32;
+		GPGPU_DType dataType = GPGPU_DTYPE_FLOAT32;
 		
 		std::string varNameStr(varName);
 		std::istringstream iss(varNameStr);
@@ -268,7 +268,7 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
 			case GPGPU_DTYPE_VEC3   : 
 			case GPGPU_DTYPE_VEC4   : cls = mxSINGLE_CLASS; break;
 			default:
-			mexErrMsgIdAndTxt("GPGPU:UnsupportedDtype", "Unsupported data type for download.")
+			mexErrMsgIdAndTxt("GPGPU:UnsupportedDtype", "Unsupported data type for download.");
 		}
 
 		plhs[0] = mxCreateNumericArray(ndim, dims, cls, mxREAL);
