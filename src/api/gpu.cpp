@@ -7,6 +7,7 @@
 #include "../compiler/spirv_compiler.hpp"
 
 #include <chrono>
+#include <sstream>
 
 namespace gpgpu {
 
@@ -102,9 +103,40 @@ std::shared_ptr<detail::DataState> GPU::registerVariable(
     std::string_view varName, DataType dtype, size_t elementSize, Interpolation interp) {
     if (!impl_ || !impl_->backend) return nullptr;
 
+    std::string resolvedName(varName);
+    {
+        std::istringstream iss(resolvedName);
+        std::vector<std::string> parts;
+        std::string token;
+        while (iss >> token) {
+            parts.push_back(token);
+        }
+        if (parts.size() == 2) {
+            const std::string& typeStr = parts[0];
+            bool matched = true;
+            if (typeStr == "float32" || typeStr == "single" || typeStr == "float") { dtype = DataType::Float32; }
+            else if (typeStr == "float64" || typeStr == "double")                  { dtype = DataType::Float64; }
+            else if (typeStr == "int32" || typeStr == "int")                       { dtype = DataType::Int32;   }
+            else if (typeStr == "uint32" || typeStr == "uint")                     { dtype = DataType::UInt32;  }
+            else if (typeStr == "int16")                                           { dtype = DataType::Int16;   }
+            else if (typeStr == "uint16")                                          { dtype = DataType::UInt16;  }
+            else if (typeStr == "int8" || typeStr == "char" || typeStr == "byte")  { dtype = DataType::Int8;    }
+            else if (typeStr == "uint8" || typeStr == "uchar" || typeStr == "ubyte") { dtype = DataType::UInt8; }
+            else if (typeStr == "vec2")                                            { dtype = DataType::Vec2;    }
+            else if (typeStr == "vec3")                                            { dtype = DataType::Vec3;    }
+            else if (typeStr == "vec4")                                            { dtype = DataType::Vec4;    }
+            else { matched = false; }
+
+            if (matched) {
+                elementSize = dataTypeSize(dtype);
+                resolvedName = parts[1];
+            }
+        }
+    }
+
     // Replace existing variable if registered with the same name
     for (auto& existing : impl_->variables) {
-        if (existing && existing->name == varName) {
+        if (existing && existing->name == resolvedName) {
             existing->dtype = dtype;
             existing->elementSize = elementSize;
             existing->interpolation = interp;
@@ -114,7 +146,7 @@ std::shared_ptr<detail::DataState> GPU::registerVariable(
 
     auto state = std::make_shared<detail::DataState>();
     state->backend = impl_->backend;
-    state->name = std::string(varName);
+    state->name = std::move(resolvedName);
     state->dtype = dtype;
     state->elementSize = elementSize;
     state->interpolation = interp;
@@ -184,7 +216,7 @@ ExecutionTicket GPU::runAsync(uint32_t width, uint32_t height, uint32_t depth) {
         b.dtype = var->dtype;
         b.interpolation = var->interpolation;
         b.dims = var->dims;
-        b.sizeBytes = var->elementCount * var->elementSize;
+        b.sizeBytes = var->elementCount * dataTypeDeviceStride(var->dtype);
         bindings.push_back(std::move(b));
     }
 

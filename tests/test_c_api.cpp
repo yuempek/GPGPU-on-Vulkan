@@ -133,3 +133,39 @@ TEST_F(CApiTest, ErrorHandling) {
     gpgpu_clear_error(ctx_);
     EXPECT_EQ(gpgpu_has_error(ctx_), nullptr);
 }
+
+TEST_F(CApiTest, Vec3RgbAndGetDTypeEndToEnd) {
+    const uint32_t W = 16;
+    const uint32_t H = 8;
+    const size_t N = static_cast<size_t>(W) * H;
+
+    GPGPU_Data outVec3 = gpgpu_create_data(
+        ctx_, "outputData", nullptr, 0, GPGPU_DTYPE_VEC3, GPGPU_INTERP_NONE);
+    ASSERT_NE(outVec3, nullptr);
+    EXPECT_EQ(gpgpu_data_get_dtype(outVec3), GPGPU_DTYPE_VEC3);
+
+    int kRes = gpgpu_set_kernel(ctx_, "kernel(coord){ outputData[coord] = vec3(float(coord.x), float(coord.y), 0.75); }");
+    EXPECT_EQ(kRes, 0);
+    EXPECT_EQ(gpgpu_has_error(ctx_), nullptr);
+
+    int rRes = gpgpu_run(ctx_, W, H, 1);
+    EXPECT_EQ(rRes, 0);
+    EXPECT_EQ(gpgpu_has_error(ctx_), nullptr);
+
+    EXPECT_EQ(gpgpu_data_get_element_count(outVec3), N);
+
+    std::vector<float> rgb(N * 3, 0.0f);
+    int gRes = gpgpu_data_get(outVec3, rgb.data(), N);
+    EXPECT_EQ(gRes, 0);
+
+    for (uint32_t y = 0; y < H; ++y) {
+        for (uint32_t x = 0; x < W; ++x) {
+            size_t idx = (static_cast<size_t>(y) * W + x) * 3;
+            EXPECT_FLOAT_EQ(rgb[idx + 0], static_cast<float>(x));
+            EXPECT_FLOAT_EQ(rgb[idx + 1], static_cast<float>(y));
+            EXPECT_FLOAT_EQ(rgb[idx + 2], 0.75f);
+        }
+    }
+
+    gpgpu_data_destroy(outVec3);
+}

@@ -33,6 +33,23 @@ gpgpu::DataType mapDType(GPGPU_DType dt) noexcept {
     return gpgpu::DataType::Float32;
 }
 
+GPGPU_DType unmapDType(gpgpu::DataType dt) noexcept {
+    switch (dt) {
+        case gpgpu::DataType::Float32: return GPGPU_DTYPE_FLOAT32;
+        case gpgpu::DataType::Float64: return GPGPU_DTYPE_FLOAT64;
+        case gpgpu::DataType::Int32:   return GPGPU_DTYPE_INT32;
+        case gpgpu::DataType::UInt32:  return GPGPU_DTYPE_UINT32;
+        case gpgpu::DataType::Int16:   return GPGPU_DTYPE_INT16;
+        case gpgpu::DataType::UInt16:  return GPGPU_DTYPE_UINT16;
+        case gpgpu::DataType::Int8:    return GPGPU_DTYPE_INT8;
+        case gpgpu::DataType::UInt8:   return GPGPU_DTYPE_UINT8;
+        case gpgpu::DataType::Vec2:    return GPGPU_DTYPE_VEC2;
+        case gpgpu::DataType::Vec3:    return GPGPU_DTYPE_VEC3;
+        case gpgpu::DataType::Vec4:    return GPGPU_DTYPE_VEC4;
+        default:                       return GPGPU_DTYPE_FLOAT32;
+    }
+}
+
 gpgpu::Interpolation mapInterp(GPGPU_Interp interp) noexcept {
     switch (interp) {
         case GPGPU_INTERP_NONE:    return gpgpu::Interpolation::None;
@@ -128,7 +145,7 @@ GPGPU_API GPGPU_Data gpgpu_create_data(GPGPU_Context ctx,
 
         if (host_ptr && elem_count > 0) {
             state->isAutoSized = false;
-            state->upload(host_ptr, elem_count * elemSize, gpgpu::Dim3(static_cast<uint32_t>(elem_count), 1, 1));
+            state->upload(host_ptr, elem_count * state->elementSize, gpgpu::Dim3(static_cast<uint32_t>(elem_count), 1, 1));
         }
 
         auto handle = new GPGPU_Data_T();
@@ -183,6 +200,11 @@ GPGPU_API int gpgpu_data_get_dims(GPGPU_Data data, uint32_t* out_x, uint32_t* ou
     if (out_y) *out_y = data->state->dims.y;
     if (out_z) *out_z = data->state->dims.z;
     return 0;
+}
+
+GPGPU_API GPGPU_DType gpgpu_data_get_dtype(GPGPU_Data data) {
+    if (!data || !data->state) return GPGPU_DTYPE_FLOAT32;
+    return unmapDType(data->state->dtype);
 }
 
 GPGPU_API int gpgpu_kernel(GPGPU_Context ctx, const char* kernel_code) {

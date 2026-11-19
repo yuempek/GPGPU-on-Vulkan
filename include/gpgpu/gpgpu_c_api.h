@@ -68,6 +68,7 @@ GPGPU_API GPGPU_Data    gpgpu_create_data(GPGPU_Context ctx,
 GPGPU_API int           gpgpu_data_set(GPGPU_Data data, const void* host_ptr, size_t elem_count);
 GPGPU_API size_t        gpgpu_data_get_element_count(GPGPU_Data data);
 GPGPU_API int           gpgpu_data_get_dims(GPGPU_Data data, uint32_t* out_x, uint32_t* out_y, uint32_t* out_z);
+GPGPU_API GPGPU_DType   gpgpu_data_get_dtype(GPGPU_Data data);
 GPGPU_API int           gpgpu_data_get(GPGPU_Data data, void* out_host_ptr, size_t max_elem_count);
 GPGPU_API void          gpgpu_data_dispose(GPGPU_Data data);
 GPGPU_API void          gpgpu_data_destroy(GPGPU_Data data);

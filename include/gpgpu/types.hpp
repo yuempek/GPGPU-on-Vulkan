@@ -63,7 +63,7 @@ enum class DataType : uint8_t {
 };
 
 /**
- * @brief Byte size of a single element of a given DataType.
+ * @brief Byte size of a single element of a given DataType on the host (CPU).
  */
 constexpr size_t dataTypeSize(DataType dt) noexcept {
     switch (dt) {
@@ -84,6 +84,17 @@ constexpr size_t dataTypeSize(DataType dt) noexcept {
         case DataType::UVec4:   return 16;
     }
     return 4;
+}
+
+/**
+ * @brief Byte stride of a single element of a given DataType in GLSL std430 storage buffers on the GPU.
+ * Note: In std430 layout, vec3 arrays have a base alignment and array stride of 16 bytes (4 floats).
+ */
+constexpr size_t dataTypeDeviceStride(DataType dt) noexcept {
+    if (dt == DataType::Vec3) {
+        return 16;
+    }
+    return dataTypeSize(dt);
 }
 
 /**
@@ -112,6 +123,7 @@ constexpr std::string_view dataTypeToGlslString(DataType dt) noexcept {
 
 // Lightweight vector types for host-side convenience when not using GLM
 struct alignas(8)  vec2  { float x = 0.0f, y = 0.0f; };
+struct             vec3  { float x = 0.0f, y = 0.0f, z = 0.0f; };
 struct alignas(16) vec4  { float x = 0.0f, y = 0.0f, z = 0.0f, w = 0.0f; };
 struct alignas(8)  ivec2 { int32_t x = 0, y = 0; };
 struct alignas(16) ivec4 { int32_t x = 0, y = 0, z = 0, w = 0; };
@@ -130,6 +142,7 @@ template <> struct TypeTraits<uint16_t> { static constexpr DataType type = DataT
 template <> struct TypeTraits<int8_t>   { static constexpr DataType type = DataType::Int8;    };
 template <> struct TypeTraits<uint8_t>  { static constexpr DataType type = DataType::UInt8;   };
 template <> struct TypeTraits<vec2>     { static constexpr DataType type = DataType::Vec2;    };
+template <> struct TypeTraits<vec3>     { static constexpr DataType type = DataType::Vec3;    };
 template <> struct TypeTraits<vec4>     { static constexpr DataType type = DataType::Vec4;    };
 template <> struct TypeTraits<ivec2>    { static constexpr DataType type = DataType::IVec2;   };
 template <> struct TypeTraits<ivec4>    { static constexpr DataType type = DataType::IVec4;   };

@@ -33,6 +33,7 @@
 // Standalone mock headers for non-MATLAB environments
 typedef struct mxArray_tag mxArray;
 typedef size_t mwSize;
+typedef int mxClassID;
 
 extern "C" {
     void mexErrMsgIdAndTxt(const char * identifier, const char * err_msg, ...);
@@ -54,7 +55,14 @@ extern "C" {
     mxArray *mxCreateDoubleScalar(double value);
     void mxFree(void *ptr);
 }
+#define mxDOUBLE_CLASS 6
 #define mxSINGLE_CLASS 7
+#define mxINT8_CLASS   8
+#define mxUINT8_CLASS  9
+#define mxINT16_CLASS  10
+#define mxUINT16_CLASS 11
+#define mxINT32_CLASS  12
+#define mxUINT32_CLASS 13
 #define mxREAL 0
 #endif
 
@@ -130,8 +138,6 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
 		std::vector<std::string> varNameParts;
 		std::string token;
 		
-		int i = 0;
-		
 		while (iss >> token) {
 			varNameParts.push_back(token);
 		}
@@ -151,6 +157,7 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
 			if (dataTypeStr == "vec3")                                                         { dataType = GPGPU_DTYPE_VEC3;    } else
 			if (dataTypeStr == "vec4")                                                         { dataType = GPGPU_DTYPE_VEC4;    } else
 			{
+				mxFree(varName);
 				std::string msg = "Unknown data type : " + dataTypeStr;
 				std::string withHint = msg + "(expected: float32, float64, int32, uint32, int16, uint16, int8, uint8, vec2, vec3, vec4)";
 				mexErrMsgIdAndTxt("GPGPU:invalidType", withHint.c_str());
@@ -162,16 +169,25 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
 			varName = mxArrayToString(mxCreateString(namePart.c_str()));
 		}
 
+		size_t vecComp = 1;
+		switch (dataType) {
+			case GPGPU_DTYPE_VEC2: vecComp = 2; break;
+			case GPGPU_DTYPE_VEC3: vecComp = 3; break;
+			case GPGPU_DTYPE_VEC4: vecComp = 4; break;
+			default: break;
+		}
+
         if (nrhs > 2 && (mxIsSingle(prhs[2]) || mxIsDouble(prhs[2]))) {
             size_t count = mxGetNumberOfElements(prhs[2]);
+            size_t elemCount = count / vecComp;
             if (mxIsSingle(prhs[2])) {
                 float* ptr = (float*)mxGetData(prhs[2]);
-                data = gpgpu_create_data(g_ctx, varName, ptr, count, dataType, interp);
+                data = gpgpu_create_data(g_ctx, varName, ptr, elemCount, dataType, interp);
             } else {
                 double* dptr = (double*)mxGetData(prhs[2]);
                 std::vector<float> fbuf(count);
                 for (size_t i = 0; i < count; ++i) fbuf[i] = static_cast<float>(dptr[i]);
-                data = gpgpu_create_data(g_ctx, varName, fbuf.data(), count, dataType, interp);
+                data = gpgpu_create_data(g_ctx, varName, fbuf.data(), elemCount, dataType, interp);
             }
         } else {
             data = gpgpu_create_data(g_ctx, varName, nullptr, 0, dataType, interp);
@@ -229,7 +245,7 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
         gpgpu_data_get_dims(data, &dx, &dy, &dz);
 
         
-		GPGPU_DType dtype = GPGPU_DTYPE_FLOAT32; // FIXME : implement gpgpu_data_get_dtype(data);
+		GPGPU_DType dtype = gpgpu_data_get_dtype(data);
 		
 		mwSize vecComp = 1;
 		switch (dtype) {

@@ -253,6 +253,10 @@ std::string GLSLGenerator::generate(const ParsedKernel& parsed,
             st << "    uint _flat_idx = _gid.y * _pc._u_dims.x + _gid.x;\n";
             if (outDtype == DataType::Vec4) {
                 st << "    " << outVarName << "[_flat_idx] = _st_fragColor;\n";
+            } else if (outDtype == DataType::Vec3) {
+                st << "    " << outVarName << "[_flat_idx] = _st_fragColor.rgb;\n";
+            } else if (outDtype == DataType::Vec2) {
+                st << "    " << outVarName << "[_flat_idx] = _st_fragColor.rg;\n";
             } else if (outDtype == DataType::Float32) {
                 st << "    " << outVarName << "[_flat_idx] = _st_fragColor.r;\n";
             } else {
