@@ -22,6 +22,10 @@
 #include <vector>
 #include <cstdint>
 
+#include <sstream>
+#include <algorithm>
+
+
 // Forward declare MATLAB MEX types and functions so this compiles even when mex.h is not present
 #if defined(MATLAB_MEX_FILE) || defined(HAVE_MEX_H)
 #  include "mex.h"
@@ -118,20 +122,59 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
             }
             mxFree(interpStr);
         }
+		
+		GPGPU_Dtype dataType = GPGPU_DTYPE_FLOAT32;
+		
+		std::string varNameStr(varName);
+		std::istringstream iss(varNameStr);
+		std::vector<std::string> varNameParts;
+		std::string token;
+		
+		int i = 0;
+		
+		while (iss >> token) {
+			varNameParts.push_back(token);
+		}
+		
+		if (varNameParts.size() == 2) {
+			const std::string& dataTypeStr = varNameParts[0];
+			
+			if (dataTypeStr == "float32" || dataTypeStr == "single" || dataTypeStr == "float") { dataType = GPGPU_DTYPE_FLOAT32; } else
+			if (dataTypeStr == "float64" || dataTypeStr == "double" )                          { dataType = GPGPU_DTYPE_FLOAT64; } else
+			if (dataTypeStr == "int32" || dataTypeStr == "int" )                               { dataType = GPGPU_DTYPE_INT32;   } else
+			if (dataTypeStr == "uint32" || dataTypeStr == "uint" )                             { dataType = GPGPU_DTYPE_UINT32;  } else
+			if (dataTypeStr == "int16")                                                        { dataType = GPGPU_DTYPE_INT16;   } else
+			if (dataTypeStr == "uint16")                                                       { dataType = GPGPU_DTYPE_UINT16;  } else
+			if (dataTypeStr == "int8" || dataTypeStr == "char" || dataTypeStr == "byte")       { dataType = GPGPU_DTYPE_INT8;    } else
+			if (dataTypeStr == "uint8" || dataTypeStr == "uchar" || dataTypeStr == "ubyte")    { dataType = GPGPU_DTYPE_UINT8;   } else
+			if (dataTypeStr == "vec2")                                                         { dataType = GPGPU_DTYPE_VEC2;    } else
+			if (dataTypeStr == "vec3")                                                         { dataType = GPGPU_DTYPE_VEC3;    } else
+			if (dataTypeStr == "vec4")                                                         { dataType = GPGPU_DTYPE_VEC4;    } else
+			{
+				std::string msg = "Unknown data type : " + dataTypeStr;
+				std::string withHint = msg + "(expected: float32, float64, int32, uint32, int16, uint16, int8, uint8, vec2, vec3, vec4)";
+				mexErrMsgIdAndTxt("GPGPU:invalidType", withHint.c_str());
+			}
+			
+			const std::string& namePart = varNameParts[1];
+			
+			mxFree(varName);
+			varName = mxArrayToString(mxCreateString(namePart.c_str()));
+		}
 
         if (nrhs > 2 && (mxIsSingle(prhs[2]) || mxIsDouble(prhs[2]))) {
             size_t count = mxGetNumberOfElements(prhs[2]);
             if (mxIsSingle(prhs[2])) {
-                float* ptr = mxGetSingles(prhs[2]);
-                data = gpgpu_create_data(g_ctx, varName, ptr, count, GPGPU_DTYPE_FLOAT32, interp);
+                float* ptr = (float*)mxGetData(prhs[2]);
+                data = gpgpu_create_data(g_ctx, varName, ptr, count, dataType, interp);
             } else {
-                double* dptr = mxGetDoubles(prhs[2]);
+                double* dptr = (double*)mxGetData(prhs[2]);
                 std::vector<float> fbuf(count);
                 for (size_t i = 0; i < count; ++i) fbuf[i] = static_cast<float>(dptr[i]);
-                data = gpgpu_create_data(g_ctx, varName, fbuf.data(), count, GPGPU_DTYPE_FLOAT32, interp);
+                data = gpgpu_create_data(g_ctx, varName, fbuf.data(), count, dataType, interp);
             }
         } else {
-            data = gpgpu_create_data(g_ctx, varName, nullptr, 0, GPGPU_DTYPE_FLOAT32, interp);
+            data = gpgpu_create_data(g_ctx, varName, nullptr, 0, dataType, interp);
         }
         mxFree(varName);
 
@@ -185,11 +228,52 @@ extern "C" void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
         uint32_t dx = 0, dy = 0, dz = 0;
         gpgpu_data_get_dims(data, &dx, &dy, &dz);
 
-        mwSize dims[3] = { (mwSize)dx, (mwSize)(dy > 0 ? dy : 1), (mwSize)(dz > 0 ? dz : 1) };
+        
+		GPGPU_DType dtype = GPGPU_DTYPE_FLOAT32; // FIXME : implement gpgpu_data_get_dtype(data);
+		
+		mwSize vecComp = 1;
+		switch (dtype) {
+			case GPGPU_DTYPE_VEC2: vecComp = 2; break;
+			case GPGPU_DTYPE_VEC3: vecComp = 3; break;
+			case GPGPU_DTYPE_VEC4: vecComp = 4; break;
+			default: break;
+		}
+		
         mwSize ndim = (dz > 1) ? 3 : ((dy > 1) ? 2 : 1);
+		if (vecComp > 1) ndim++;
+		
+		mwSize dims[5] = { 1, 1, 1, 1, 1 };
+		dims[0] = dx;
+		if (ndim >= 2) dims[1] = (dy > 0) ? dy : 1;
+		if (ndim >= 3) dims[2] = (dz > 0) ? dz : 1;
 
-        plhs[0] = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-        float* outPtr = mxGetSingles(plhs[0]);
+		if (vecComp > 1) {
+			for(int i = 4; i > 0; i--)
+				dims[i] = dims[i - 1];
+			
+			dims[0] = vecComp;
+		}
+		
+		mxClassID cls;
+		switch (dtype) {
+			case GPGPU_DTYPE_FLOAT32: cls = mxSINGLE_CLASS; break;
+			case GPGPU_DTYPE_FLOAT64: cls = mxDOUBLE_CLASS; break;
+			case GPGPU_DTYPE_INT32  : cls = mxINT32_CLASS; break;
+			case GPGPU_DTYPE_UINT32 : cls = mxUINT32_CLASS; break;
+			case GPGPU_DTYPE_INT16  : cls = mxINT16_CLASS; break;
+			case GPGPU_DTYPE_UINT16 : cls = mxUINT16_CLASS; break;
+			case GPGPU_DTYPE_INT8   : cls = mxINT8_CLASS; break;
+			case GPGPU_DTYPE_UINT8  : cls = mxUINT8_CLASS; break;
+			case GPGPU_DTYPE_VEC2   : 
+			case GPGPU_DTYPE_VEC3   : 
+			case GPGPU_DTYPE_VEC4   : cls = mxSINGLE_CLASS; break;
+			default:
+			mexErrMsgIdAndTxt("GPGPU:UnsupportedDtype", "Unsupported data type for download.")
+		}
+
+		plhs[0] = mxCreateNumericArray(ndim, dims, cls, mxREAL);
+		float* outPtr = (float*)mxGetData(plhs[0]);
+
         gpgpu_data_get(data, outPtr, count);
     }
     else if (command == "hasError") {
